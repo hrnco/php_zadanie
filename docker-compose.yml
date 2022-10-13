@@ -1,21 +1,62 @@
 version: '3'
 
 services:
-###> doctrine/doctrine-bundle ###
-  database:
-    image: postgres:${POSTGRES_VERSION:-14}-alpine
+
+  symfony:
+    ports:
+      - 8080:80
+    image: registry.gitlab.com/aroha-docker/symfony/5.4/dev:latest
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-app}
-      # You should definitely change the password in production
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
-      POSTGRES_USER: ${POSTGRES_USER:-app}
+      PROJECT_CODE: 'api'
     volumes:
-      - db-data:/var/lib/postgresql/data:rw
-      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
-      # - ./docker/db/data:/var/lib/postgresql/data:rw
-###< doctrine/doctrine-bundle ###
+      - .:/var/www/html
+      - var_cache:/var/www/html/var/cache
+      - composer_cache:/root/.composer
+    depends_on:
+      - mysql
+      - redis
+      - mailhog
+
+  mysql:
+    image: mariadb:10.7
+    command: "--default-authentication-plugin=mysql_native_password"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: symfony
+      MYSQL_USER: symfony
+      MYSQL_PASSWORD: symfony
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: symfony
+      PMA_PASSWORD: symfony
+    depends_on:
+      - mysql
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "2M"
+        max-file: "3"
+
+  mailhog:
+    image: mailhog/mailhog
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "2M"
+        max-file: "3"
+
+  redis:
+    image: redis:6
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "2M"
+        max-file: "3"
 
 volumes:
-###> doctrine/doctrine-bundle ###
-  db-data:
-###< doctrine/doctrine-bundle ###
+  composer_cache:
+  var_cache:
